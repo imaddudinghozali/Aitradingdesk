@@ -1,14 +1,22 @@
 import logging
+from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.dol_assessment import DolAssessment
 from app.models.liquidity_level import LiquidityLevel
-from app.schemas.dol import DolAssessmentResponse, DolEvaluateRequest, DolLifecycle, DolObjectiveResponse
+from app.schemas.dol import (
+    DolAssessmentResponse,
+    DolEvaluateRequest,
+    DolLifecycle,
+    DolObjectiveResponse,
+    MultiTfDolResponse,
+)
 from app.schemas.market import VALID_SYMBOLS
 from app.services.dol_service import DolService
+from app.services.multitf_dol_service import MultiTfDolService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/dol", tags=["dol"])
@@ -38,6 +46,25 @@ def current_dol(symbol: str, db: Session = Depends(get_db)) -> DolAssessmentResp
     if assessment is None:
         raise HTTPException(status_code=404, detail="DOL assessment not found")
     return _response(db, assessment)
+
+
+@router.get("/multitf/{symbol}", response_model=MultiTfDolResponse)
+def multitf_dol(
+    symbol: str,
+    as_of_utc: datetime | None = Query(None),
+    db: Session = Depends(get_db),
+) -> MultiTfDolResponse:
+    symbol = symbol.upper()
+    if symbol not in VALID_SYMBOLS:
+        raise HTTPException(status_code=422, detail=f"Symbol must be one of {VALID_SYMBOLS}")
+    try:
+        context = MultiTfDolService.evaluate(db, symbol, as_of_utc)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("Failed to evaluate multi-timeframe DOL context")
+        raise HTTPException(status_code=500, detail="Failed to evaluate multi-timeframe DOL context") from exc
+    return MultiTfDolResponse.model_validate(context, from_attributes=True)
 
 
 def _response(db: Session, assessment: DolAssessment) -> DolAssessmentResponse:

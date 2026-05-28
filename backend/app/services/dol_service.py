@@ -132,7 +132,7 @@ class DolService:
                 assessment, direction, htf, intraday, primary, secondary, engineered, event
             )
             assessment.lifecycle_status = DolLifecycle.ACTIVE.value
-            assessment.status_reason = DolService._active_reason(event, primary)
+            assessment.status_reason = DolService._active_reason(event, primary, htf)
             assessment.old_objective_resolved = False
             assessment.prior_narrative_resolved = False
             assessment.as_of_utc = cutoff
@@ -147,7 +147,7 @@ class DolService:
                 current, direction, htf, intraday, primary, secondary, engineered, event
             )
             current.lifecycle_status = DolLifecycle.ACTIVE.value
-            current.status_reason = DolService._active_reason(event, primary)
+            current.status_reason = DolService._active_reason(event, primary, htf)
             current.as_of_utc = cutoff
             db.commit()
             db.refresh(current)
@@ -271,12 +271,28 @@ class DolService:
             (level for level in directional if level.level_type not in DolService.HTF_LEVEL_TYPES),
             None,
         )
-        primary = htf or intraday
+        # Shadow DOL guardrail (no mechanical HTF jumping): the active draw is the
+        # NEAREST operative liquidity in the delivery direction, never the farthest
+        # untaken HTF level. When the nearer HTF lows/highs are already taken, the
+        # old logic fell through to a yearly level (e.g. PYL) hundreds of points
+        # away; that is a macro objective, not the operative draw. HTF stays as
+        # higher-timeframe context (htf_objective); intraday stays as the LTF draw.
+        primary = directional[0] if directional else None
         secondary = next(
             (level for level in directional if primary is None or level.id != primary.id),
             None,
         )
         return htf, intraday, primary, secondary
+
+    @staticmethod
+    def _classify_sweep(event: SweepEvent) -> str:
+        """Classify how the triggering sweep took its liquidity (Shadow taken-level
+        decision tree): reaction-based, never mechanical level order."""
+        if event.sweep_status in DolService.REVERSAL_SWEEPS:
+            return "manipulation sweep"
+        if event.sweep_status == SweepStatus.TRUE_BREAKOUT_BREAKDOWN.value:
+            return "continuation break"
+        return "unclear liquidity event"
 
     @staticmethod
     def _resolved_status(level: LiquidityLevel | None) -> DolLifecycle | None:
@@ -311,12 +327,23 @@ class DolService:
         assessment.timing_confirmed = event.relevant_timing
 
     @staticmethod
-    def _active_reason(event: SweepEvent, primary: LiquidityLevel) -> str:
-        return (
-            f"Primary DOL {primary.level_type} selected as untaken {primary.liquidity_side} "
-            f"objective after confirmed {event.sweep_status} with displacement during "
-            f"{event.session} {event.daily_quarter}."
+    def _active_reason(
+        event: SweepEvent,
+        primary: LiquidityLevel,
+        htf: LiquidityLevel | None = None,
+    ) -> str:
+        classification = DolService._classify_sweep(event)
+        reason = (
+            f"Active DOL {primary.level_type} @ {primary.price} is the nearest operative "
+            f"{primary.liquidity_side} draw after a {classification} ({event.sweep_status}) "
+            f"with displacement during {event.session} {event.daily_quarter}."
         )
+        if htf is not None and htf.id != primary.id:
+            reason += (
+                f" Higher-timeframe objective {htf.level_type} @ {htf.price} is macro "
+                "context only, not the operative draw."
+            )
+        return reason
 
     @staticmethod
     def _utc(value: datetime) -> datetime:

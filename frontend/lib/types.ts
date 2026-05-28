@@ -311,3 +311,31 @@ export interface QuarterLadderResponse {
   now_ratio: number;
   rows: LadderRow[];
 }
+
+export interface TimeframeFrame {
+  timeframe: string;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  model: string;
+  position: string;
+  draw: string;
+  candle_count: number;
+}
+
+export interface TimeframeContext {
+  timeframe: string;
+  frame: TimeframeFrame | null;
+  parent_status: string;
+  note: string;
+}
+
+export interface MultiTfDolResponse {
+  symbol: string;
+  as_of_utc: string;
+  contexts: TimeframeContext[];
+  conflict_level: string;
+  execution_hint: string;
+  active_dol: string;
+}

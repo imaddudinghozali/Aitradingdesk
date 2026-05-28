@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.market import VALID_SYMBOLS
 
@@ -62,3 +62,34 @@ class DolAssessmentResponse(BaseModel):
     execution_status: str
     as_of_utc: datetime
     updated_at: datetime
+
+
+class TimeframeFrameResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True, protected_namespaces=())
+    timeframe: str
+    open: Decimal
+    high: Decimal
+    low: Decimal
+    close: Decimal
+    model: str
+    position: str
+    draw: str
+    candle_count: int
+
+
+class TimeframeContextResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    timeframe: str
+    frame: TimeframeFrameResponse | None
+    parent_status: str
+    note: str
+
+
+class MultiTfDolResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    symbol: str
+    as_of_utc: datetime
+    contexts: list[TimeframeContextResponse]
+    conflict_level: str
+    execution_hint: str
+    active_dol: str

@@ -85,10 +85,10 @@ class DolServiceTest(unittest.TestCase):
         self.db.refresh(event)
         return event
 
-    def test_confirmed_reversal_selects_htf_primary_and_engineered_liquidity(self) -> None:
+    def test_confirmed_reversal_uses_nearest_draw_with_htf_as_macro_context(self) -> None:
         swept_high = self.level("PDH", "BSL", 2470, "taken")
-        target = self.level("PDL", "SSL", 2400)
-        intraday = self.level("ASIA_LOW", "SSL", 2430)
+        htf_objective = self.level("PDL", "SSL", 2400)
+        nearest = self.level("ASIA_LOW", "SSL", 2430)
         self.event(swept_high, "Valid Sweep", datetime(2026, 5, 20, 14, tzinfo=UTC))
 
         assessment = DolService.evaluate(self.db, "XAUUSD")
@@ -96,9 +96,13 @@ class DolServiceTest(unittest.TestCase):
 
         self.assertEqual("Active", assessment.lifecycle_status)
         self.assertEqual("delivery_down", assessment.delivery_direction)
-        self.assertEqual(target.id, assessment.primary_level_id)
-        self.assertEqual(intraday.id, assessment.intraday_level_id)
+        # No mechanical HTF jumping: nearest operative SSL draw is the active DOL,
+        # while the farther HTF level is retained only as macro context.
+        self.assertEqual(nearest.id, assessment.primary_level_id)
+        self.assertEqual(nearest.id, assessment.intraday_level_id)
+        self.assertEqual(htf_objective.id, assessment.htf_level_id)
         self.assertEqual(swept_high.id, assessment.engineered_level_id)
+        self.assertIn("macro context", assessment.status_reason)
         self.assertEqual("Narrative Ready - wait for later execution confirmation layers", response.execution_status)
 
     def test_opposing_objective_does_not_replace_unresolved_dol(self) -> None:
