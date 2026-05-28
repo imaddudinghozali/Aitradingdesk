@@ -121,12 +121,17 @@ export default async function ActiveNarrativeBoardPage({
 }
 
 function NarrativeBoard({ snapshot }: { snapshot: NarrativeSnapshot }) {
-  const rows: [string, string][] = [
+  const blockers = compactReasons(snapshot.no_trade_reason);
+  const summaryRows: [string, string][] = [
+    ["Bias", snapshot.direction_liquidity],
+    ["DOL", `${snapshot.htf_dol} (${snapshot.dol_status})`],
+    ["Target", snapshot.target_liquidity],
+    ["Invalidation", snapshot.invalidation],
+  ];
+  const detailRows: [string, string][] = [
     ["Sesi", snapshot.session],
     ["Anchor Sesi", snapshot.session_anchor],
     ["Quarter (QT)", snapshot.daily_quarter],
-    ["HTF DOL", snapshot.htf_dol],
-    ["Arah Likuiditas", snapshot.direction_liquidity],
     ["Model Aktif", snapshot.active_model],
     ["State Delivery", snapshot.delivery_state],
     ["Narrative Sesi", snapshot.session_narrative],
@@ -149,13 +154,67 @@ function NarrativeBoard({ snapshot }: { snapshot: NarrativeSnapshot }) {
           {new Date(snapshot.as_of_utc).toLocaleString()}
         </span>
       </div>
+
+      <div className="mb-4 grid gap-3 md:grid-cols-2">
+        {summaryRows.map(([label, value]) => (
+          <div key={label} className="border-l-2 border-shadow-warn pl-3">
+            <div className="text-[11px] uppercase tracking-wider text-shadow-muted">
+              {label}
+            </div>
+            <div className="mt-1 text-sm font-semibold text-shadow-ink">
+              {idText(value)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mb-4 rounded-md border border-shadow-border/80 bg-shadow-bg/40 p-3">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-shadow-muted">
+          Kenapa belum trade
+        </div>
+        {blockers.length ? (
+          <ul className="space-y-1 text-sm text-shadow-ink">
+            {blockers.map((reason) => (
+              <li key={reason}>- {reason}</li>
+            ))}
+          </ul>
+        ) : (
+          <div className="text-sm text-shadow-muted">
+            {idText(snapshot.no_trade_reason)}
+          </div>
+        )}
+      </div>
+
+      <div className="mb-4 rounded-md border border-shadow-info/30 bg-shadow-info/10 p-3 text-sm text-shadow-ink">
+        <div className="text-xs font-semibold uppercase tracking-wider text-shadow-info">
+          Action berikutnya
+        </div>
+        <div className="mt-1">{idText(snapshot.validation_required)}</div>
+        <div className="mt-2 text-xs text-shadow-muted">
+          Window: {idText(snapshot.next_valid_window)}
+        </div>
+      </div>
+
       <div className="kv">
-        {rows.map(([label, value]) => (
+        {detailRows.map(([label, value]) => (
           <FragmentRow key={label} label={label} value={value} />
         ))}
       </div>
     </Panel>
   );
+}
+
+function compactReasons(value: string) {
+  return idText(value)
+    .split(".")
+    .map((part) =>
+      part
+        .trim()
+        .replace(/^Tidak Ada Trade - /, "")
+        .replace(/^Tidak Ada Trade: /, ""),
+    )
+    .filter(Boolean)
+    .slice(0, 5);
 }
 
 function FragmentRow({ label, value }: { label: string; value: string }) {

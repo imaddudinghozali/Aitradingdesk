@@ -256,51 +256,61 @@ class NarrativeService:
 
     @staticmethod
     def render_telegram(snapshot: NarrativeSnapshot) -> str:
-        return "\n".join(
+        no_trade_reasons = NarrativeService._compact_reason_list(
+            snapshot.no_trade_reason,
+            limit=5,
+        )
+        lines = [
+            "SNAPSHOT MARKET DELIVERY",
+            f"{snapshot.symbol} | {NarrativeService._id_text(snapshot.session)} | {snapshot.daily_quarter} {NarrativeService._id_text(snapshot.quarter_status)}",
+            "",
+            f"Bias: {NarrativeService._id_text(snapshot.direction_liquidity)}",
+            f"DOL: {NarrativeService._id_text(snapshot.htf_dol)} ({NarrativeService._id_text(snapshot.dol_status)})",
+            f"Target: {NarrativeService._id_text(snapshot.target_liquidity)}",
+            f"Model: {NarrativeService._short_text(snapshot.active_model, 120)}",
+            "",
+            f"Status: {NarrativeService._id_text(snapshot.execution_status)}",
+        ]
+
+        if no_trade_reasons:
+            lines.append("Kenapa:")
+            lines.extend(f"- {reason}" for reason in no_trade_reasons)
+
+        lines.extend(
             [
-                "SNAPSHOT MARKET DELIVERY",
-                f"Pair: {snapshot.symbol}",
-                f"Sesi: {NarrativeService._id_text(snapshot.session)}",
-                f"Anchor Sesi: {snapshot.session_anchor}",
-                f"Quarter (QT): {snapshot.daily_quarter}",
-                f"Status Quarter: {NarrativeService._id_text(snapshot.quarter_status)}",
-                f"DOL HTF: {NarrativeService._id_text(snapshot.htf_dol)}",
-                f"Status DOL: {NarrativeService._id_text(snapshot.dol_status)}",
-                f"Arah Likuiditas: {NarrativeService._id_text(snapshot.direction_liquidity)}",
-                f"Model Aktif: {NarrativeService._id_text(snapshot.active_model)}",
-                f"State Makro: {NarrativeService._id_text(snapshot.macro_state)}",
-                f"State Quarterly: {NarrativeService._id_text(snapshot.quarterly_state)}",
-                f"State Sesi: {NarrativeService._id_text(snapshot.session_state)}",
-                f"State Intraday: {NarrativeService._id_text(snapshot.intraday_state)}",
-                f"Resolusi Konflik: {NarrativeService._id_text(snapshot.conflict_resolution)}",
-                f"Katalis News: {NarrativeService._id_text(snapshot.news_catalyst_status)}",
-                f"Tempo Delivery: {NarrativeService._id_text(snapshot.delivery_tempo)}",
-                f"State Delivery: {NarrativeService._id_text(snapshot.delivery_state)}",
-                f"Narrative Sesi: {NarrativeService._id_text(snapshot.session_narrative)}",
-                f"Status Judas/Manipulasi: {NarrativeService._id_text(snapshot.judas_manipulation_status)}",
-                f"Status OPR: {NarrativeService._id_text(snapshot.opr_status)}",
-                f"Konteks Timing MMXM: {NarrativeService._id_text(snapshot.mmxm_timing_context)}",
-                f"SSMT XAU-XAG: {NarrativeService._id_text(snapshot.ssmt_status)}",
-                f"Kualitas Ekspansi: {NarrativeService._id_text(snapshot.expansion_quality)}",
-                f"Konteks Setup: {NarrativeService._id_text(snapshot.setup_context)}",
-                f"Konfirmasi Trigger: {NarrativeService._id_text(snapshot.trigger_confirmation)}",
-                f"Konteks Risiko: {NarrativeService._id_text(snapshot.risk_context)}",
-                f"Status Eksekusi: {NarrativeService._id_text(snapshot.execution_status)}",
-                f"Alasan Tidak Ada Trade: {NarrativeService._id_text(snapshot.no_trade_reason)}",
+                "",
                 f"Validasi Wajib: {NarrativeService._id_text(snapshot.validation_required)}",
-                f"Status Narrative: {NarrativeService._id_text(snapshot.continuation_status)}",
-                f"Perlu Reset: {NarrativeService._id_text(snapshot.reset_required)}",
-                f"Keputusan Jika Invalidated: {NarrativeService._id_text(snapshot.next_decision_if_invalidated)}",
                 f"Window Valid Berikutnya: {NarrativeService._id_text(snapshot.next_valid_window)}",
                 f"Invalidation: {NarrativeService._id_text(snapshot.invalidation)}",
-                f"Target Likuiditas: {NarrativeService._id_text(snapshot.target_liquidity)}",
-                "Referensi Retracement: "
-                + NarrativeService._id_text(
-                    snapshot.retracement_reference
-                    or "None - no untaken opposing liquidity nearby."
-                ),
+                "",
+                "Detail lengkap ada di dashboard.",
             ]
         )
+        return "\n".join(lines)
+
+    @staticmethod
+    def _compact_reason_list(value: str, limit: int = 5) -> list[str]:
+        text = NarrativeService._id_text(value)
+        parts = [part.strip(" .") for part in text.split(".") if part.strip(" .")]
+        cleaned: list[str] = []
+        for part in parts:
+            reason = part
+            for prefix in ("Tidak Ada Trade - ", "Tidak Ada Trade: "):
+                if reason.startswith(prefix):
+                    reason = reason[len(prefix) :]
+            reason = NarrativeService._short_text(reason, 150)
+            if reason and reason not in cleaned:
+                cleaned.append(reason)
+            if len(cleaned) >= limit:
+                break
+        return cleaned
+
+    @staticmethod
+    def _short_text(value: object, limit: int) -> str:
+        text = NarrativeService._id_text(value)
+        if len(text) <= limit:
+            return text
+        return text[: limit - 3].rstrip() + "..."
 
     @staticmethod
     def _id_text(value: object) -> str:

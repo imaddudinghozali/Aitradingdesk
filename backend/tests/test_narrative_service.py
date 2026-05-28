@@ -178,10 +178,12 @@ class NarrativeServiceTest(unittest.TestCase):
         send_message.assert_called_once()
         sent_text = send_message.call_args.args[1]
         self.assertIn("SNAPSHOT MARKET DELIVERY", sent_text)
-        self.assertIn("Status Eksekusi: Tidak Ada Trade", sent_text)
-        self.assertIn("Alasan Tidak Ada Trade:", sent_text)
+        self.assertIn("Status: Tidak Ada Trade", sent_text)
+        self.assertIn("Kenapa:", sent_text)
+        self.assertIn("Detail lengkap ada di dashboard.", sent_text)
         self.assertNotIn("MARKET DELIVERY SNAPSHOT", sent_text)
         self.assertNotIn("Execution Status:", sent_text)
+        self.assertNotIn("Alasan Tidak Ada Trade:", sent_text)
 
     @patch("app.services.narrative_service.TelegramService.send_message", return_value="902")
     @patch(
@@ -202,7 +204,7 @@ class NarrativeServiceTest(unittest.TestCase):
         self.assertEqual("902", alert.telegram_message_id)
         sent_text = send_message.call_args.args[1]
         self.assertIn("SNAPSHOT MARKET DELIVERY", sent_text)
-        self.assertIn("Status Eksekusi: Tidak Ada Trade", sent_text)
+        self.assertIn("Status: Tidak Ada Trade", sent_text)
 
     def test_latest_valid_ssmt_is_included_in_snapshot(self) -> None:
         self.db.add(

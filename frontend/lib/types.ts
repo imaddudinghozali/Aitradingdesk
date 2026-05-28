@@ -146,19 +146,43 @@ export interface NarrativeSnapshot {
   session: string;
   session_anchor: string;
   daily_quarter: string;
+  quarter_status: string;
+  next_valid_window: string;
   htf_dol: string;
+  dol_status: string;
   direction_liquidity: string;
   active_model: string;
+  macro_state: string;
+  quarterly_state: string;
+  session_state: string;
+  intraday_state: string;
+  conflict_resolution: string;
+  news_catalyst_status: string;
+  delivery_tempo: string;
   delivery_state: string;
   session_narrative: string;
   judas_manipulation_status: string;
+  opr_status: string;
+  mmxm_timing_context: string;
   ssmt_status: string;
   expansion_quality: string;
+  setup_context: string;
+  trigger_confirmation: string;
+  risk_context: string;
   execution_status: string;
+  no_trade_reason: string;
+  validation_required: string;
+  continuation_status: string;
+  reset_required: boolean;
+  next_decision_if_invalidated: string;
   invalidation: string;
   target_liquidity: string;
   retracement_reference: string;
+  rendered_snapshot: string;
+  telegram_status: string;
+  telegram_message_id: string | null;
   as_of_utc: string;
+  created_at: string;
 }
 
 export interface AlertRecord {
