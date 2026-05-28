@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #0b0f14;
+  color: #e5e7eb;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-md border border-shadow-border bg-shadow-panel p-4;
+  }
+  .panel-h {
+    @apply text-xs uppercase tracking-wider text-shadow-muted;
+  }
+  .kv {
+    @apply grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 font-mono text-sm;
+  }
+  .pill {
+    @apply inline-flex items-center rounded-full border px-2 py-0.5 text-xs;
+  }
+  .pill-ok {
+    @apply pill border-shadow-ok/30 bg-shadow-ok/10 text-shadow-ok;
+  }
+  .pill-warn {
+    @apply pill border-shadow-warn/30 bg-shadow-warn/10 text-shadow-warn;
+  }
+  .pill-err {
+    @apply pill border-shadow-err/30 bg-shadow-err/10 text-shadow-err;
+  }
+  .pill-info {
+    @apply pill border-shadow-info/30 bg-shadow-info/10 text-shadow-info;
+  }
+  .pill-muted {
+    @apply pill border-shadow-border bg-shadow-border/40 text-shadow-muted;
+  }
+}
